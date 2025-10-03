@@ -17,11 +17,11 @@
     "javascript",
     "charts"
   ],
-  "author": "Tu Nombre",
+  "author": "afterchabon",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tu-usuario/calendar-hours-tracker.git"
+    "url": "https://github.com/fterchabon/Calendar-hours-tracker"
   },
   "engines": {
     "node": ">=14.0.0"
