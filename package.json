@@ -1,0 +1,38 @@
+ {
+  "name": "calendar-hours-tracker",
+  "version": "1.0.0",
+  "description": "Aplicación para rastrear y analizar horas de eventos de Google Calendar con sistema de tags",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "python -m http.server 8000",
+    "build": "echo 'No build required for static app'",
+    "test": "echo 'No tests configured'"
+  },
+  "keywords": [
+    "google-calendar",
+    "time-tracking",
+    "productivity",
+    "analytics",
+    "javascript",
+    "charts"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/calendar-hours-tracker.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  },
+  "dependencies": {},
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
