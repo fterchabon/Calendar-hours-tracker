@@ -56,6 +56,8 @@ function initializeGoogleAuth() {
                 // 👉 Muy importante: setear token aquí
                 gapi.client.setToken({ access_token: response.access_token });
 
+                console.log('🔐 Token activo en gapi:', gapi.client.getToken());
+
                 isAuthenticated = true;
                 await loadCalendarEvents();
                 showUserInfo();
@@ -116,6 +118,16 @@ function signOut() {
 // ===============================================
 
 async function loadCalendarEvents() {
+
+    // 🔐 BLOQUE CRÍTICO: asegurar token OAuth
+    const token = gapi.client.getToken();
+
+    if (!token || !token.access_token) {
+        console.warn('⚠️ No hay token activo, solicitando uno nuevo...');
+        tokenClient.requestAccessToken({ prompt: '' });
+        return; // ⛔ NO seguimos sin token
+    }
+
     try {
         showLoading('Cargando eventos...');
 
@@ -146,6 +158,7 @@ async function loadCalendarEvents() {
         hideLoading();
     }
 }
+
 // ===============================================
 // PROCESAMIENTO DE EVENTOS
 // ===============================================
