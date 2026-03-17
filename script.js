@@ -364,13 +364,15 @@ function updateStatistics() {
 
     document.getElementById('total-hours').textContent = Math.round(totalHoursGross * 10) / 10;
     document.getElementById('total-events').textContent = totalEvents;
-    document.getElementById('avg-hours').textContent = Math.round(avgHoursPerDay * 10) / 10;
-    document.getElementById('total-tags').textContent = uniqueTags;
 
+    const avgHoursEl = document.getElementById('avg-hours');
+    const totalTagsEl = document.getElementById('total-tags');
     const breaksEl = document.getElementById('total-breaks');
     const breakHoursEl = document.getElementById('total-break-hours');
     const workNetEl = document.getElementById('total-work-net');
 
+    if (avgHoursEl) avgHoursEl.textContent = Math.round(avgHoursPerDay * 10) / 10;
+    if (totalTagsEl) totalTagsEl.textContent = uniqueTags;
     if (breaksEl) breaksEl.textContent = totalBreakCount;
     if (breakHoursEl) breakHoursEl.textContent = totalBreakHours.toFixed(1);
     if (workNetEl) workNetEl.textContent = totalWorkHoursNet.toFixed(1);
