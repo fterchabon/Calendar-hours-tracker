@@ -189,6 +189,7 @@ function processEvents() {
 
 function extractEventData(event) {
     try {
+        console.log('TAG:', primaryTag, '| HORAS:', hours);
         const title = event.summary || 'Sin título';
         const description = event.description || '';
 
