@@ -231,6 +231,8 @@ function extractEventData(event) {
             hours = textDuration;
         }
 
+        const originalHours = hours;
+
         if (hours < (CONFIG.APP.HOURS_CONFIG.MIN_DURATION_MINUTES / 60)) {
             return null;
         }
@@ -278,6 +280,7 @@ function extractEventData(event) {
             tags: tags,
             primaryTag: primaryTag,
             hours: Math.round(hours * 100) / 100,
+            originalHours: Math.round(originalHours * 100) / 100,
             date: startDate.toISOString().split('T')[0],
             startTime: startDate,
             color: CONFIG.getTagColor(primaryTag),
