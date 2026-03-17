@@ -8,6 +8,9 @@ let allEvents = [];
 let processedEvents = [];
 let charts = {};
 let tokenClient = null;
+let totalBreakCount = 0;
+let totalBreakHours = 0;
+let totalWorkHoursNet = 0;
 
 // ===============================================
 // INICIALIZACIÓN DE LA APLICACIÓN
@@ -146,6 +149,11 @@ async function loadCalendarEvents() {
         const response = await gapi.client.calendar.events.list(request);
         allEvents = response.result.items || [];
 
+        // RESET BREAKS
+        totalBreakCount = 0;
+        totalBreakHours = 0;
+        totalWorkHoursNet = 0;
+
         console.log(`📅 Cargados ${allEvents.length} eventos`);
 
         processEvents();
@@ -216,6 +224,21 @@ function extractEventData(event) {
 
         if (hours < (CONFIG.APP.HOURS_CONFIG.MIN_DURATION_MINUTES / 60)) {
             return null; // descartar eventos muy cortos
+        }
+        // ===============================================
+        // BREAK LOGIC (NUEVO)
+        // ===============================================
+
+        if (primaryTag === 'trabajo' && hours > 6.5) {
+        hours -= 0.5;
+
+            totalBreakCount += 1;
+            totalBreakHours += 0.5;
+        }
+
+        // Acumular horas de trabajo netas
+        if (primaryTag === 'trabajo') {
+            totalWorkHoursNet += hours;
         }
 
         const startDate = event.start.dateTime ?
@@ -294,6 +317,11 @@ function updateStatistics() {
     document.getElementById('total-events').textContent = totalEvents;
     document.getElementById('avg-hours').textContent = Math.round(avgHoursPerDay * 10) / 10;
     document.getElementById('total-tags').textContent = uniqueTags;
+
+    // Mostrar breaks y trabajo neto
+    document.getElementById('total-breaks').textContent = totalBreakCount;
+    document.getElementById('total-break-hours').textContent = totalBreakHours.toFixed(1);
+    document.getElementById('total-work-net').textContent = totalWorkHoursNet.toFixed(1);
 }
 
 function updateCharts() {
