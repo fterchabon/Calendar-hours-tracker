@@ -200,6 +200,14 @@ function extractEventData(event) {
             tags.push(CONFIG.COLOR_TAG_MAP[event.colorId]);
         }
 
+        // 3. Si sigue sin tags, inferir por contenido
+        if (tags.length === 0) {
+            const inferredTag = inferTagFromContent(title, description);
+            if (inferredTag) {
+                tags.push(inferredTag);
+            }
+        }
+
         // 3. Si sigue vacío, usar el tag por defecto
         const primaryTag = tags.length > 0 ? tags[0] : CONFIG.APP.TAG_CONFIG.DEFAULT_TAG;
         const normalizedTag = (primaryTag || '').trim().toLowerCase();
@@ -300,6 +308,25 @@ function extractTags(title, description) {
     });
     
     return Array.from(tags);
+}
+// ===============================================
+// DETECTAR TAG AUTOMÁTICO POR CONTENIDO
+// ===============================================
+
+function inferTagFromContent(title, description) {
+    const text = `${title} ${description}`.toLowerCase();
+
+    const workKeywords = [
+        'clarion',
+        'hub',
+        'hubbar'
+    ];
+
+    if (workKeywords.some(keyword => text.includes(keyword))) {
+        return 'trabajo';
+    }
+
+    return null;
 }
 
 function extractDurationFromText(text) {
