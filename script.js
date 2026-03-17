@@ -189,7 +189,7 @@ function processEvents() {
 
 function extractEventData(event) {
     try {
-        console.log('TAG:', primaryTag, '| HORAS:', hours);
+        
         const title = event.summary || 'Sin título';
         const description = event.description || '';
 
@@ -203,7 +203,7 @@ function extractEventData(event) {
 
         // 3. Si sigue vacío, usar el tag por defecto
         const primaryTag = tags.length > 0 ? tags[0] : CONFIG.APP.TAG_CONFIG.DEFAULT_TAG;
-
+        console.log('TAG:', primaryTag, '| HORAS:', hours);
         // Calcular duración
         let hours = 0;
         if (event.start.dateTime && event.end.dateTime) {
