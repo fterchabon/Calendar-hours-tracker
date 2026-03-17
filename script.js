@@ -353,15 +353,16 @@ function extractDurationFromText(text) {
 // ===============================================
 
 function updateStatistics() {
-    const totalHours = processedEvents.reduce((sum, event) => sum + event.hours, 0);
+    const totalHoursGross = processedEvents.reduce((sum, event) => sum + (event.originalHours || event.hours), 0);
+    const totalHoursNet = processedEvents.reduce((sum, event) => sum + event.hours, 0);
     const totalEvents = processedEvents.length;
     const uniqueTags = new Set(processedEvents.map(event => event.primaryTag)).size;
 
     const dateRange = getDateRange();
     const daysDiff = Math.max(1, (dateRange.end - dateRange.start) / (1000 * 60 * 60 * 24));
-    const avgHoursPerDay = totalHours / daysDiff;
+    const avgHoursPerDay = totalHoursNet / daysDiff;
 
-    document.getElementById('total-hours').textContent = Math.round(totalHours * 10) / 10;
+    document.getElementById('total-hours').textContent = Math.round(totalHoursGross * 10) / 10;
     document.getElementById('total-events').textContent = totalEvents;
     document.getElementById('avg-hours').textContent = Math.round(avgHoursPerDay * 10) / 10;
     document.getElementById('total-tags').textContent = uniqueTags;
@@ -377,7 +378,9 @@ function updateStatistics() {
     console.log('📊 Totales break/trabajo:', {
         totalBreakCount,
         totalBreakHours,
-        totalWorkHoursNet
+        totalWorkHoursNet,
+        totalHoursGross,
+        totalHoursNet
     });
 }
 
