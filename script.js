@@ -189,7 +189,6 @@ function processEvents() {
 
 function extractEventData(event) {
     try {
-        
         const title = event.summary || 'Sin título';
         const description = event.description || '';
 
@@ -203,6 +202,8 @@ function extractEventData(event) {
 
         // 3. Si sigue vacío, usar el tag por defecto
         const primaryTag = tags.length > 0 ? tags[0] : CONFIG.APP.TAG_CONFIG.DEFAULT_TAG;
+        const normalizedTag = (primaryTag || '').trim().toLowerCase();
+
         // Calcular duración
         let hours = 0;
         if (event.start.dateTime && event.end.dateTime) {
@@ -223,27 +224,43 @@ function extractEventData(event) {
         }
 
         if (hours < (CONFIG.APP.HOURS_CONFIG.MIN_DURATION_MINUTES / 60)) {
-            return null; // descartar eventos muy cortos
+            return null;
         }
-        // ===============================================
-        // BREAK LOGIC (NUEVO)
-        // ===============================================
 
-        if (primaryTag === 'trabajo' && hours > 6.5) {
-        hours -= 0.5;
+        // DEBUG
+        console.log('Evento procesado:', {
+            title,
+            primaryTag,
+            normalizedTag,
+            hoursAntesBreak: hours,
+            colorId: event.colorId || null
+        });
 
+        // BREAK LOGIC
+        let breakApplied = false;
+
+        if (normalizedTag === 'trabajo' && hours > 6.5) {
+            hours -= 0.5;
             totalBreakCount += 1;
             totalBreakHours += 0.5;
+            breakApplied = true;
+
+            console.log('⏸️ Break aplicado:', {
+                title,
+                horasDespuesBreak: hours,
+                totalBreakCount,
+                totalBreakHours
+            });
         }
 
         // Acumular horas de trabajo netas
-        if (primaryTag === 'trabajo') {
+        if (normalizedTag === 'trabajo') {
             totalWorkHoursNet += hours;
         }
 
-        const startDate = event.start.dateTime ?
-            new Date(event.start.dateTime) :
-            new Date(event.start.date);
+        const startDate = event.start.dateTime
+            ? new Date(event.start.dateTime)
+            : new Date(event.start.date);
 
         return {
             id: event.id,
@@ -255,7 +272,8 @@ function extractEventData(event) {
             hours: Math.round(hours * 100) / 100,
             date: startDate.toISOString().split('T')[0],
             startTime: startDate,
-            color: CONFIG.getTagColor(primaryTag)
+            color: CONFIG.getTagColor(primaryTag),
+            breakApplied: breakApplied
         };
 
     } catch (error) {
@@ -308,20 +326,29 @@ function updateStatistics() {
     const totalHours = processedEvents.reduce((sum, event) => sum + event.hours, 0);
     const totalEvents = processedEvents.length;
     const uniqueTags = new Set(processedEvents.map(event => event.primaryTag)).size;
-    
+
     const dateRange = getDateRange();
     const daysDiff = Math.max(1, (dateRange.end - dateRange.start) / (1000 * 60 * 60 * 24));
     const avgHoursPerDay = totalHours / daysDiff;
-    
+
     document.getElementById('total-hours').textContent = Math.round(totalHours * 10) / 10;
     document.getElementById('total-events').textContent = totalEvents;
     document.getElementById('avg-hours').textContent = Math.round(avgHoursPerDay * 10) / 10;
     document.getElementById('total-tags').textContent = uniqueTags;
 
-    // Mostrar breaks y trabajo neto
-    document.getElementById('total-breaks').textContent = totalBreakCount;
-    document.getElementById('total-break-hours').textContent = totalBreakHours.toFixed(1);
-    document.getElementById('total-work-net').textContent = totalWorkHoursNet.toFixed(1);
+    const breaksEl = document.getElementById('total-breaks');
+    const breakHoursEl = document.getElementById('total-break-hours');
+    const workNetEl = document.getElementById('total-work-net');
+
+    if (breaksEl) breaksEl.textContent = totalBreakCount;
+    if (breakHoursEl) breakHoursEl.textContent = totalBreakHours.toFixed(1);
+    if (workNetEl) workNetEl.textContent = totalWorkHoursNet.toFixed(1);
+
+    console.log('📊 Totales break/trabajo:', {
+        totalBreakCount,
+        totalBreakHours,
+        totalWorkHoursNet
+    });
 }
 
 function updateCharts() {
