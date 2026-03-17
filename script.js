@@ -247,7 +247,7 @@ function extractEventData(event) {
         // BREAK LOGIC
         let breakApplied = false;
 
-        if (normalizedTag === 'trabajo' && hours > 6.5) {
+        if (normalizedTag === 'trabajo' && hours > 6) {
             hours -= 0.5;
             totalBreakCount += 1;
             totalBreakHours += 0.5;
