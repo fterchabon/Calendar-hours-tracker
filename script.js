@@ -95,10 +95,10 @@ function signInWithGoogle() {
 function showUserInfo() {
     const userInfo = document.getElementById('user-info');
     userInfo.innerHTML = `
-        <img src="https://via.placeholder.com/40x40/4285f4/ffffff?text=U" alt="Usuario" class="user-photo">
+        <div class="user-photo user-avatar-fallback">U</div>
         <span>Usuario Conectado</span>
         <button onclick="signOut()" class="sign-out-btn">Cerrar Sesión</button>
-    `;
+        `;
     userInfo.style.display = 'flex';
 }
 

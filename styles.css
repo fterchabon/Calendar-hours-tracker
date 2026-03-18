@@ -1032,3 +1032,15 @@ body {
 .events-list::-webkit-scrollbar-thumb:hover {
     background: #3367d6;
 }
+.user-avatar-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #4285f4;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
