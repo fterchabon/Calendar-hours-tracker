@@ -4,45 +4,513 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendar Hours Tracker</title>
-    
-    <!-- Estilos CSS -->
-    <link rel="stylesheet" href="styles.css">
-    
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
     <!-- Google Identity Services + gapi client -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    
-    <!-- Chart.js para gráficos -->
+
+    <!-- Chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <style>
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg:       #0d0e10;
+        --surface:  #14161a;
+        --surface2: #1c1f25;
+        --surface3: #22262f;
+        --border:   rgba(255,255,255,0.06);
+        --border2:  rgba(255,255,255,0.11);
+        --text:     #eeecea;
+        --muted:    #686b78;
+        --muted2:   #8b8fa0;
+        --accent:   #7c6ef7;
+        --accent2:  #a89bfa;
+        --green:    #3ecf7a;
+        --amber:    #f0a050;
+        --red:      #f05060;
+        --blue:     #4fa3f7;
+        --font:     'DM Sans', sans-serif;
+        --mono:     'DM Mono', monospace;
+        --r:        14px;
+        --r2:       10px;
+        --r3:       8px;
+        --shadow:   0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    html, body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════════════════
+       LOADING SCREEN
+    ══════════════════════════════════════════ */
+    .loading-screen {
+        position: fixed; inset: 0;
+        background: var(--bg);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 20px; z-index: 9999;
+    }
+    .loading-screen h2 {
+        font-size: 15px; font-weight: 400; color: var(--muted2);
+        letter-spacing: 0.2px;
+    }
+    .spinner {
+        width: 36px; height: 36px;
+        border: 2px solid var(--surface3);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════════
+       APP SHELL — two-column layout
+    ══════════════════════════════════════════ */
+    .app-container {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+        width: 230px;
+        flex-shrink: 0;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        padding: 28px 0;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: hidden;
+    }
+    .sidebar-logo {
+        display: flex; align-items: center; gap: 10px;
+        padding: 0 24px 32px;
+        font-weight: 600; font-size: 15px; letter-spacing: -0.3px;
+    }
+    .sidebar-logo-icon {
+        width: 32px; height: 32px; border-radius: 9px;
+        background: var(--accent);
+        display: grid; place-items: center;
+        font-size: 16px; flex-shrink: 0;
+    }
+    .sidebar-nav { flex: 1; }
+    .sidebar-section-label {
+        font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.9px; font-weight: 500;
+        padding: 8px 24px 4px; margin-top: 8px;
+    }
+    .sidebar-link {
+        display: flex; align-items: center; gap: 10px;
+        padding: 9px 24px; color: var(--muted2);
+        font-size: 13.5px; font-weight: 400;
+        cursor: pointer; transition: all 0.15s;
+        text-decoration: none; border: none; background: none;
+        width: 100%; text-align: left;
+    }
+    .sidebar-link:hover { color: var(--text); background: var(--surface2); }
+    .sidebar-link.active {
+        color: var(--text); font-weight: 500;
+        background: rgba(124,110,247,0.1);
+        border-right: 2px solid var(--accent);
+    }
+    .sidebar-icon { width: 16px; height: 16px; opacity: 0.65; flex-shrink: 0; }
+    .sidebar-link.active .sidebar-icon { opacity: 1; }
+
+    .sidebar-footer {
+        margin-top: auto;
+        padding: 16px 16px 0;
+        border-top: 1px solid var(--border);
+    }
+    /* user-info inside sidebar footer */
+    #user-info {
+        display: flex !important; /* override inline style when shown */
+        align-items: center; gap: 10px;
+        padding: 10px 8px; border-radius: var(--r2);
+        cursor: pointer; transition: background 0.15s;
+    }
+    #user-info:hover { background: var(--surface2); }
+    .user-photo {
+        width: 34px; height: 34px; border-radius: 50%;
+        object-fit: cover; flex-shrink: 0;
+        border: 1.5px solid var(--border2);
+    }
+    .user-meta { flex: 1; min-width: 0; }
+    #user-name {
+        display: block; font-size: 13px; font-weight: 500;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sign-out-btn {
+        font-size: 11px; color: var(--muted); background: none;
+        border: none; cursor: pointer; font-family: var(--font);
+        padding: 0; transition: color 0.15s;
+    }
+    .sign-out-btn:hover { color: var(--red); }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px 36px 60px;
+        display: flex; flex-direction: column; gap: 28px;
+    }
+
+    /* ══════════════════════════════════════════
+       PAGE HEADER  (replaces old <header>)
+    ══════════════════════════════════════════ */
+    .page-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .page-header-title {
+        font-size: 22px; font-weight: 600; letter-spacing: -0.4px;
+    }
+    .page-header-sub {
+        font-size: 13px; color: var(--muted); margin-top: 3px;
+    }
+
+    /* ══════════════════════════════════════════
+       AUTH SECTION
+    ══════════════════════════════════════════ */
+    .auth-section {
+        display: flex; align-items: center; justify-content: center;
+        flex: 1; padding: 60px 0;
+    }
+    .auth-card {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 20px;
+        padding: 48px 52px;
+        text-align: center;
+        max-width: 420px;
+        width: 100%;
+        box-shadow: var(--shadow);
+    }
+    .auth-card h2 {
+        font-size: 20px; font-weight: 600; letter-spacing: -0.3px;
+        margin-bottom: 10px;
+    }
+    .auth-card p {
+        font-size: 13.5px; color: var(--muted2); margin-bottom: 28px;
+        line-height: 1.6;
+    }
+    .google-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        background: var(--surface2); border: 1px solid var(--border2);
+        color: var(--text); padding: 12px 24px; border-radius: var(--r2);
+        font-size: 14px; font-weight: 500; font-family: var(--font);
+        cursor: pointer; transition: all 0.15s;
+    }
+    .google-btn:hover { background: var(--surface3); border-color: var(--border2); }
+
+    /* ══════════════════════════════════════════
+       CONTROLS SECTION
+    ══════════════════════════════════════════ */
+    .controls-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 20px 24px;
+    }
+    .controls-section-title {
+        font-size: 13px; font-weight: 600; margin-bottom: 16px;
+        color: var(--muted2); text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr auto;
+        gap: 12px; align-items: end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-group label {
+        font-size: 11.5px; color: var(--muted); font-weight: 500;
+        text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .control-group input[type="date"],
+    .control-group select {
+        background: var(--surface2); border: 1px solid var(--border2);
+        color: var(--text); border-radius: var(--r3);
+        padding: 9px 12px; font-size: 13px; font-family: var(--font);
+        outline: none; transition: border-color 0.15s; width: 100%;
+    }
+    .control-group input[type="date"]:focus,
+    .control-group select:focus { border-color: var(--accent); }
+    .control-group select option { background: var(--surface2); }
+    .refresh-btn {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        background: var(--accent); color: #fff;
+        border: none; border-radius: var(--r3);
+        padding: 10px 18px; font-size: 13px; font-weight: 500;
+        font-family: var(--font); cursor: pointer; transition: opacity 0.15s;
+        white-space: nowrap;
+    }
+    .refresh-btn:hover { opacity: 0.85; }
+
+    /* ══════════════════════════════════════════
+       STATS / METRICS
+    ══════════════════════════════════════════ */
+    .stats-section {}
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+    }
+    .stat-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); padding: 20px 20px 18px;
+        transition: border-color 0.2s;
+        display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-card:hover { border-color: var(--border2); }
+    .stat-icon { font-size: 18px; margin-bottom: 6px; }
+    .stat-number {
+        font-size: 26px; font-weight: 600; letter-spacing: -0.8px;
+        font-family: var(--mono); color: var(--accent2);
+    }
+    .stat-label {
+        font-size: 11.5px; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500;
+    }
+
+    /* ══════════════════════════════════════════
+       CHARTS
+    ══════════════════════════════════════════ */
+    .charts-section {}
+    .charts-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .chart-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); padding: 22px 24px;
+        transition: border-color 0.2s;
+    }
+    .chart-card:hover { border-color: var(--border2); }
+    .chart-card h4 {
+        font-size: 13.5px; font-weight: 600; margin-bottom: 18px;
+        color: var(--text);
+    }
+    .chart-card canvas { max-height: 260px; }
+
+    /* ══════════════════════════════════════════
+       EVENTS SECTION
+    ══════════════════════════════════════════ */
+    .events-section {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--r); padding: 22px 24px;
+    }
+    .events-section h3 {
+        font-size: 14px; font-weight: 600; margin-bottom: 16px;
+    }
+    .events-controls {
+        display: flex; gap: 10px; margin-bottom: 16px;
+    }
+    #search-events {
+        flex: 1; background: var(--surface2); border: 1px solid var(--border2);
+        color: var(--text); border-radius: var(--r3);
+        padding: 9px 14px; font-size: 13px; font-family: var(--font);
+        outline: none; transition: border-color 0.15s;
+    }
+    #search-events::placeholder { color: var(--muted); }
+    #search-events:focus { border-color: var(--accent); }
+    #sort-events {
+        background: var(--surface2); border: 1px solid var(--border2);
+        color: var(--text); border-radius: var(--r3);
+        padding: 9px 12px; font-size: 13px; font-family: var(--font);
+        outline: none; cursor: pointer; min-width: 160px;
+    }
+    #sort-events option { background: var(--surface2); }
+
+    .events-list { display: flex; flex-direction: column; gap: 8px; }
+
+    /* Event items injected by script.js — style the wrapper classes it likely uses */
+    .event-item, [class*="event-item"], .events-list > div {
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: var(--r3); padding: 12px 16px;
+        display: flex; align-items: center; gap: 12px;
+        transition: border-color 0.15s;
+    }
+    .event-item:hover, .events-list > div:hover { border-color: var(--border2); }
+
+    /* Tag badges that script.js might inject */
+    .tag, [class*="tag-"], .badge {
+        display: inline-flex; align-items: center;
+        padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500;
+        background: rgba(124,110,247,0.13); color: var(--accent2);
+    }
+    .hours-badge, [class*="hours"] {
+        font-family: var(--mono); font-size: 12px; color: var(--muted2);
+    }
+
+    /* ══════════════════════════════════════════
+       MODAL
+    ══════════════════════════════════════════ */
+    .modal {
+        position: fixed; inset: 0; z-index: 999;
+        background: rgba(0,0,0,0.6);
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+    .modal-content {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 18px;
+        padding: 32px 36px;
+        max-width: 400px; width: 90%;
+        position: relative;
+        box-shadow: var(--shadow);
+    }
+    .modal-content h2 { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+    .modal-content p  { font-size: 13.5px; color: var(--muted2); margin-bottom: 24px; }
+    .close {
+        position: absolute; top: 16px; right: 20px;
+        font-size: 20px; cursor: pointer; color: var(--muted);
+        line-height: 1; transition: color 0.15s;
+    }
+    .close:hover { color: var(--text); }
+    .btn-primary {
+        background: var(--accent); color: #fff;
+        border: none; border-radius: var(--r3);
+        padding: 10px 22px; font-size: 13px; font-weight: 500;
+        font-family: var(--font); cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* ══════════════════════════════════════════
+       SCROLLBAR
+    ══════════════════════════════════════════ */
+    .main-content::-webkit-scrollbar { width: 5px; }
+    .main-content::-webkit-scrollbar-track { background: transparent; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 900px) {
+        .sidebar { display: none; }
+        .main-content { padding: 24px 20px 48px; }
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .charts-grid { grid-template-columns: 1fr; }
+        .controls-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 580px) {
+        .stats-grid { grid-template-columns: 1fr 1fr; }
+        .controls-grid { grid-template-columns: 1fr; }
+    }
+    </style>
 </head>
 <body>
-    <!-- Pantalla de carga inicial -->
-    <div id="loading-screen" class="loading-screen">
-        <div class="spinner"></div>
-        <h2>Cargando Calendar Hours Tracker...</h2>
-    </div>
 
-    <!-- Aplicación principal -->
-    <div id="app" class="app-container" style="display: none;">
-        
-        <!-- Header -->
-        <header class="header">
-            <h1>📅 Calendar Hours Tracker</h1>
-            <p>Analiza y rastrea las horas de tus eventos de Google Calendar</p>
-            <div class="user-info" id="user-info" style="display: none;">
+<!-- ══ LOADING SCREEN ══ -->
+<div id="loading-screen" class="loading-screen">
+    <div class="spinner"></div>
+    <h2>Cargando Calendar Hours Tracker...</h2>
+</div>
+
+<!-- ══ APP SHELL ══ -->
+<div id="app" class="app-container" style="display:none;">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">📅</div>
+            HrsTrack
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-section-label">Principal</div>
+            <a class="sidebar-link active" href="#">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                </svg>
+                Dashboard
+            </a>
+            <a class="sidebar-link" href="#">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Calendario
+            </a>
+            <a class="sidebar-link" href="#">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                </svg>
+                Registro
+            </a>
+
+            <div class="sidebar-section-label">Análisis</div>
+            <a class="sidebar-link" href="#">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                </svg>
+                Reportes
+            </a>
+            <a class="sidebar-link" href="#">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <circle cx="3" cy="6" r="1.5"/>
+                    <circle cx="3" cy="12" r="1.5"/>
+                    <circle cx="3" cy="18" r="1.5"/>
+                </svg>
+                Eventos
+            </a>
+        </nav>
+
+        <!-- User info movido al footer del sidebar -->
+        <div class="sidebar-footer">
+            <div id="user-info" style="display:none;">
                 <img id="user-photo" src="" alt="Usuario" class="user-photo">
-                <span id="user-name"></span>
-                <button onclick="signOut()" class="sign-out-btn">Cerrar Sesión</button>
+                <div class="user-meta">
+                    <span id="user-name"></span>
+                    <button onclick="signOut()" class="sign-out-btn">Cerrar sesión</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main-content">
+
+        <!-- Page header (reemplaza <header>) -->
+        <header class="page-header">
+            <div>
+                <div class="page-header-title">Calendar Hours Tracker</div>
+                <div class="page-header-sub">Analiza y rastrea las horas de tus eventos de Google Calendar</div>
             </div>
         </header>
 
-        <!-- Sección de autenticación -->
+        <!-- AUTH SECTION — lógica intacta -->
         <section id="auth-section" class="auth-section">
             <div class="auth-card">
                 <h2>🔐 Conectar con Google Calendar</h2>
                 <p>Necesitamos acceso a tu calendario para analizar tus eventos</p>
                 <button onclick="signInWithGoogle()" class="google-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -53,44 +521,44 @@
             </div>
         </section>
 
-        <!-- Dashboard principal -->
-        <main id="dashboard" class="dashboard" style="display: none;">
-            
+        <!-- DASHBOARD — lógica 100% intacta, mismos IDs -->
+        <main id="dashboard" class="dashboard" style="display:none;">
+
             <!-- Controles y filtros -->
             <section class="controls-section">
-                <h3>⚙️ Configuración y Filtros</h3>
+                <div class="controls-section-title">⚙ Configuración y Filtros</div>
                 <div class="controls-grid">
                     <div class="control-group">
-                        <label for="date-start">📅 Fecha Inicio</label>
+                        <label for="date-start">Fecha inicio</label>
                         <input type="date" id="date-start" onchange="updateData()">
                     </div>
                     <div class="control-group">
-                        <label for="date-end">📅 Fecha Fin</label>
+                        <label for="date-end">Fecha fin</label>
                         <input type="date" id="date-end" onchange="updateData()">
                     </div>
                     <div class="control-group">
-                        <label for="tag-filter">🏷️ Filtrar por Tag</label>
+                        <label for="tag-filter">Filtrar por tag</label>
                         <select id="tag-filter" onchange="filterEvents()">
                             <option value="">Todos los tags</option>
                         </select>
                     </div>
                     <div class="control-group">
                         <button onclick="refreshData()" class="refresh-btn">
-                            🔄 Actualizar Datos
+                            🔄 Actualizar
                         </button>
                     </div>
                 </div>
             </section>
 
-            <!-- Estadísticas principales -->
+            <!-- Estadísticas -->
             <section class="stats-section">
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">⏱️</div>
                         <div class="stat-number" id="total-hours">0</div>
-                        <div class="stat-label">Horas Totales</div>
+                        <div class="stat-label">Horas totales</div>
                     </div>
-                        <div class="stat-card">
+                    <div class="stat-card">
                         <div class="stat-icon">💼</div>
                         <div class="stat-number" id="total-work-net">0</div>
                         <div class="stat-label">Trabajo neto</div>
@@ -101,15 +569,14 @@
                         <div class="stat-label">Horas en breaks</div>
                     </div>
                     <div class="stat-card">
-                         <div class="stat-icon">⏸️</div>
-                         <div class="stat-number" id="total-breaks">0</div>
+                        <div class="stat-icon">⏸️</div>
+                        <div class="stat-number" id="total-breaks">0</div>
                         <div class="stat-label">Breaks</div>
-                    </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">📊</div>
                         <div class="stat-number" id="total-events">0</div>
-                        <div class="stat-label">Total Eventos</div>
+                        <div class="stat-label">Total eventos</div>
                     </div>
                 </div>
             </section>
@@ -139,37 +606,35 @@
                         <option value="title">Ordenar por Título</option>
                     </select>
                 </div>
-                <div id="events-list" class="events-list">
-                    <!-- Los eventos se cargan aquí dinámicamente -->
-                </div>
+                <div id="events-list" class="events-list"></div>
             </section>
 
         </main>
-    </div>
+    </div><!-- /main-content -->
+</div><!-- /app -->
 
-    <!-- Modales -->
-    <div id="error-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('error-modal')">&times;</span>
-            <h2>❌ Error</h2>
-            <p id="error-message">Ha ocurrido un error</p>
-            <button onclick="closeModal('error-modal')" class="btn-primary">Cerrar</button>
-        </div>
+<!-- MODAL — lógica intacta -->
+<div id="error-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('error-modal')">&times;</span>
+        <h2>❌ Error</h2>
+        <p id="error-message">Ha ocurrido un error</p>
+        <button onclick="closeModal('error-modal')" class="btn-primary">Cerrar</button>
     </div>
+</div>
 
-    <!-- Scripts -->
-    <script src="config.js"></script>
-    <script src="script.js"></script>
-    
-    <script>
-        // Inicializar la aplicación cuando se carga la página
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('app').style.display = 'block';
-                initializeApp();
-            }, 1500);
-        });
-    </script>
+<!-- Scripts originales — sin tocar -->
+<script src="config.js"></script>
+<script src="script.js"></script>
+
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            initializeApp();
+        }, 1500);
+    });
+</script>
 </body>
 </html>
